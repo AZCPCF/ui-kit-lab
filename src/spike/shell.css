@@ -1,0 +1,220 @@
+/*
+ * Neutral application shell for the CSS isolation spike.
+ *
+ * Isolation rules:
+ * - The only global reset is `body { margin: 0 }`.
+ * - body styles (font, colors) are intentionally declared here so that any
+ *   library leaking global body styles becomes visible in browser tests.
+ * - No library styles may be imported from this file.
+ */
+
+body {
+  margin: 0;
+  font-family: system-ui, Tahoma, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #211f1b;
+  background: #eceae5;
+}
+
+/*
+ * WORKAROUND W1 (CSS isolation spike):
+ * `@mantine/core/styles.css` declares global `body { font-family;
+ * background-color; color; ... }` rules that win the cascade against the
+ * plain `body` rule above (same specificity, imported later). The font leaks
+ * directly, and the background becomes invalid-at-computed-value-time
+ * (var(--mantine-color-body) is scoped to the panel root) -> transparent.
+ * Re-declaring the shell body styles at higher specificity restores the
+ * neutral baseline. This is a shell-side fix for a real Mantine leak; see
+ * docs/CSS_ISOLATION_SPIKE.md.
+ */
+html body {
+  font-family: system-ui, Tahoma, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #211f1b;
+  background: #eceae5;
+}
+
+/* ---- Shell chrome ------------------------------------------------- */
+
+.spike-shell {
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+.spike-header {
+  border-bottom: 1px solid #c9c5bd;
+  padding-bottom: 16px;
+}
+
+.spike-header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: #211f1b;
+}
+
+.spike-header p {
+  margin: 0 0 12px;
+  color: #6b6559;
+  font-size: 13px;
+}
+
+.spike-nav {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.spike-nav a {
+  color: #5b5648;
+  text-decoration: none;
+  border-bottom: 1px dashed #a39c8d;
+  padding-bottom: 1px;
+}
+
+.spike-nav a:hover {
+  color: #211f1b;
+}
+
+/* ---- Panels grid --------------------------------------------------- */
+
+.spike-panels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+@media (max-width: 1180px) {
+  .spike-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.spike-panel-card {
+  border: 1px solid #c9c5bd;
+  border-radius: 10px;
+  background: #f7f6f3;
+  min-width: 0;
+}
+
+.spike-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #d8d4cc;
+}
+
+.spike-panel-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: #211f1b;
+}
+
+.spike-panel-sub {
+  font-size: 11px;
+  margin: 2px 0 0;
+  color: #8a8376;
+}
+
+.spike-panel-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.spike-toggle {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid #b3ada0;
+  border-radius: 6px;
+  background: #fff;
+  color: #44403a;
+  cursor: pointer;
+}
+
+.spike-toggle:hover {
+  background: #efede8;
+}
+
+.spike-panel-state {
+  font-size: 11px;
+  color: #6b6559;
+  margin: 0;
+  padding: 6px 14px 0;
+}
+
+.spike-panel-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 280px;
+}
+
+.spike-portal-slot {
+  min-height: 1px;
+}
+
+/* ---- Neutral notes section (leak detector) ------------------------- */
+
+.spike-notes {
+  border-top: 1px solid #c9c5bd;
+  padding-top: 16px;
+}
+
+.spike-notes h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: #211f1b;
+}
+
+.spike-notes p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #4c463d;
+  max-width: 70ch;
+}
+
+.spike-notes ul {
+  margin: 0;
+  padding-inline-start: 20px;
+  font-size: 13px;
+  color: #4c463d;
+}
+
+.spike-neutral-button,
+.spike-neutral-input {
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.spike-neutral-button {
+  padding: 4px 12px;
+  border: 1px solid #b3ada0;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.spike-neutral-input {
+  padding: 4px 10px;
+  border: 1px solid #b3ada0;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.spike-footer {
+  margin-top: 24px;
+  font-size: 11px;
+  color: #8a8376;
+}
