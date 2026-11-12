@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PlaygroundShell } from "./app/PlaygroundShell";
-import { SpikeShell } from "./spike/SpikeShell";
-import { shellLabels } from "./data/labels";
+// import { SpikeShell } from "./spike/SpikeShell";
+// import { shellLabels } from "./data/labels";
 
 /**
  * Two views, no router (the app is a two-state toggle — a router would be
