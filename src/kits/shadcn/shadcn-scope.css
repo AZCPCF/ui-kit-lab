@@ -1,0 +1,236 @@
+/*
+ * shadcn/ui scope for the CSS isolation spike.
+ *
+ * Tailwind CSS v4 is imported WITHOUT Preflight:
+ *   - theme.css  → design tokens (utility variable definitions)
+ *   - utilities.css → generated utilities, content-scanned ONLY under this
+ *     folder via source("./") plus an explicit @source for the isolation
+ *     spike panel, whose demo content also uses utilities (the primitives
+ *     moved to src/kits/shadcn — see docs/DECISIONS.md)
+ * Preflight is deliberately omitted so that no global element reset is
+ * applied to the document. Consequences handled below:
+ *   - a MICRO-RESET scoped to the panel scope elements (box-sizing, font
+ *     inheritance, heading margins) replaces the parts of Preflight the
+ *     components need;
+ *   - shadcn theme variables are defined on the scope elements (not :root)
+ *     and dark mode keys off the data-mode attribute (not a document-level
+ *     .dark class), so light/dark is fully panel-scoped;
+ *   - the `dark:` variant is redefined to key off the same attribute.
+ * Known accepted leakage: tw-animate-css keyframes/utility classes and
+ * Tailwind theme variables on :root are document-global, but they only take
+ * effect inside elements that use Tailwind utility classes (shadcn panel).
+ */
+
+@layer theme, base, components, utilities;
+
+/* Per the Tailwind v4 docs: `@theme inline` makes utilities reference the
+ * VALUE (--popover, resolved at each element) instead of emitting --color-*
+ * variables on :root. This is required because the raw tokens are scoped to
+ * .shadcn-panel/.shadcn-scope, not :root — a :root-emitted
+ * --color-popover: var(--popover) resolves --popover outside the panel and
+ * turns every mapped utility transparent (browser-verified failure mode). */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source('./');
+/* The CSS-isolation spike panel (src/spike/shadcn/ShadcnPanel.tsx) imports
+ * these primitives from src/kits/shadcn but renders its own utility classes;
+ * scanning that file keeps the regression harness intact after the move. */
+@source '../../spike/shadcn';
+/* The kit scenarios (src/scenarios/…) also render Tailwind utilities through
+ * these primitives. Their class strings are ONLY scanned if listed here:
+ * browser-verified failure mode — every utility used exclusively by a
+ * scenario (e.g. status colors, dark: variants, animate-spin) was silently
+ * missing from the generated CSS and fell back to inherited colors. */
+@source '../../scenarios';
+@import 'tw-animate-css';
+
+/*
+ * Panel-scoped dark variant (replaces the scaffold's
+ * `@custom-variant dark (&:is(.dark *))`).
+ * It must match descendants of BOTH scope roots:
+ *   - .shadcn-panel  → the panel body (in-flow components)
+ *   - .shadcn-scope  → the portal slot, where overlays mount outside the
+ *     .shadcn-panel element but must still receive tokens and dark styling.
+ */
+@custom-variant dark (
+  &:is(.shadcn-panel[data-mode='dark'] *),
+  &:is(.shadcn-scope[data-mode='dark'] *)
+);
+
+/*
+ * Maps the panel-scoped tokens to Tailwind color/radius tokens so that
+ * utilities like bg-popover are generated. `theme(inline)` on the theme.css
+ * import makes utilities reference the VALUE (--popover, resolved at each
+ * element) instead of emitting --color-* variables on :root — required
+ * because the raw tokens are scoped to .shadcn-panel/.shadcn-scope, not
+ * :root (a :root-emitted var would resolve --popover outside the panel and
+ * turn transparent).
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/* ---- Scoped theme variables ------------------------------------------
+ * Light tokens on the scope roots, dark tokens on [data-mode='dark']. */
+
+.shadcn-panel,
+.shadcn-scope {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  /* Status colors: reference Tailwind's own palette variables (defined on
+   * :root by theme.css) instead of hardcoding values — light uses the
+   * -600 step, dark overrides with the -400 step. */
+  --success: var(--color-emerald-600);
+  --warning: var(--color-amber-600);
+  --danger: var(--color-red-600);
+
+  /*
+   * Tailwind emits the mapped --color-* / --radius-* tokens on :root, where
+   * their var() references (--popover etc.) cannot resolve (browser-verified
+   * failure mode; @theme inline did not change this in the individual-import
+   * mode). Re-declaring them HERE makes every generated utility
+   * (bg-popover, text-muted-foreground, ring-ring/50, rounded-lg, ...)
+   * resolve against the panel-scoped raw tokens, in light AND dark mode,
+   * because these are references that re-evaluate per element.
+   */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  background: var(--background);
+  color: var(--foreground);
+  /* Shared Persian font, self-hosted (see docs/CUSTOMER_TABLE.md).
+   * Preflight is disabled, so the scope roots must declare the font family
+   * themselves — portals into the slot inherit it from here. */
+  font-family: 'Vazirmatn Variable', sans-serif;
+}
+
+.shadcn-panel[data-mode='dark'],
+.shadcn-scope[data-mode='dark'] {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --success: var(--color-emerald-400);
+  --warning: var(--color-amber-400);
+  --danger: var(--color-red-400);
+}
+
+/* ---- Scoped micro-reset (replaces the omitted Preflight) ----------------
+ * This deliberately targets ONLY the panel subtree; the document keeps its
+ * own default styles. It lives in @layer base so that Tailwind utilities
+ * (layer utilities) can always override it — the shadcn scaffold's
+ * `@layer base { * { ... } body { ... } }` rules are intentionally NOT
+ * reproduced. */
+
+@layer base {
+  .shadcn-panel,
+  .shadcn-scope {
+    border-radius: 0.5rem;
+  }
+
+  .shadcn-panel *,
+  .shadcn-scope * {
+    box-sizing: border-box;
+  }
+
+  .shadcn-panel :is(h1, h2, h3, h4, h5, h6, p),
+  .shadcn-scope :is(h1, h2, h3, h4, h5, h6, p) {
+    margin: 0;
+  }
+
+  .shadcn-panel :is(button, input, textarea, select),
+  .shadcn-scope :is(button, input, textarea, select) {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .shadcn-panel button,
+  .shadcn-scope button {
+    cursor: pointer;
+  }
+}
